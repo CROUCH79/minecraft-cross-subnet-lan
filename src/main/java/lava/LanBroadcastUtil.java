@@ -44,7 +44,8 @@ public final class LanBroadcastUtil {
    }
 
    public static void requestLocalNetworkAccess() {
-      if (Minecraft.IS_RUNNING_ON_MAC) {
+      String osName = System.getProperty("os.name", "").toLowerCase();
+      if (osName.contains("mac")) {
          Thread thread = new Thread(new LanBroadcastUtil$1(), "LocalNetworkAccess");
          thread.setDaemon(true);
          thread.start();
