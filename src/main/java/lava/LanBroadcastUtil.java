@@ -1,5 +1,6 @@
 package lava;
 
+import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.Inet4Address;
@@ -10,6 +11,7 @@ import java.net.MulticastSocket;
 import java.net.NetworkInterface;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -494,7 +496,11 @@ public final class LanBroadcastUtil {
    }
 
    public static void sendMulticastPacket(byte[] payload) {
-      sendMulticastPacket(payload, InetAddress.getByName(MULTICAST_GROUP), LAN_PORT);
+      try {
+         sendMulticastPacket(payload, InetAddress.getByName(MULTICAST_GROUP), LAN_PORT);
+      } catch (Exception e) {
+         LOGGER.warn("Failed to resolve multicast group", e);
+      }
    }
 
    public static void sendMulticastPacket(byte[] payload, InetAddress target, int port) {
@@ -512,15 +518,20 @@ public final class LanBroadcastUtil {
       }
    }
 
-   private static synchronized MulticastSocket getOrCreateMulticastSocket() throws SocketException, UnknownHostException {
+   private static synchronized MulticastSocket getOrCreateMulticastSocket() throws IOException {
       if (multicastSocket == null || multicastSocket.isClosed()) {
-         multicastSocket = new MulticastSocket();
-         multicastSocket.setTimeToLive(MULTICAST_TTL);
-         multicastSocket.setLoopbackMode(false);
+         try {
+            multicastSocket = new MulticastSocket();
+            multicastSocket.setTimeToLive(MULTICAST_TTL);
+            multicastSocket.setLoopbackMode(false);
 
-         NetworkInterface selected = findPreferredInterface();
-         if (selected != null) {
-            multicastSocket.setNetworkInterface(selected);
+            NetworkInterface selected = findPreferredInterface();
+            if (selected != null) {
+               multicastSocket.setNetworkInterface(selected);
+            }
+         } catch (IOException e) {
+            LOGGER.warn("Failed to create multicast socket", e);
+            throw e;
          }
       }
       return multicastSocket;
